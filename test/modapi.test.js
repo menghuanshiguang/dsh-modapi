@@ -51,8 +51,8 @@ test('api surface: versions, hooks, notice aliases and the scripts table', async
   await withInstance('surface', {}, async ({ instance }) => {
     const api = instance.api;
     assert.equal(api.name, 'dsh-modapi');
-    assert.equal(api.version, '0.2.0');
-    assert.equal(api.pluginVersion, '0.2.0');
+    assert.equal(api.version, '0.3.0');
+    assert.equal(api.pluginVersion, '0.3.0');
     assert.equal(api.apiVersion, '1');
     assert.equal(api.hookNames, HOOK_NAMES);
     assert.equal(api.wiredHooks, WIRED_HOOKS);
@@ -66,7 +66,11 @@ test('api surface: versions, hooks, notice aliases and the scripts table', async
     assert.equal(typeof api.hook, 'function');
     assert.equal(typeof api.unhook, 'function');
     assert.equal(typeof api.fire, 'function');
-    assert.equal(typeof api.hooks, 'function');
+    assert.equal(typeof api.hooks, 'object');
+    assert.equal(typeof api.hooks.on, 'function');
+    assert.equal(typeof api.hooks.fire, 'function');
+    assert.equal(typeof api.patch.method, 'function');
+    assert.equal(typeof api.ui.hook, 'function');
     assert.equal(api.utils.sleep, api.sleep);
     assert.equal(api.selfcheck.statePath.endsWith('contract.json'), true);
     assert.equal(typeof api.scripts.load, 'function');
@@ -79,9 +83,9 @@ test('api surface: versions, hooks, notice aliases and the scripts table', async
     assert.throws(() => {
       api.scripts = {};
     }, TypeError);
-    assert.equal(api.hooks().length, 11);
+    assert.equal(api.hooks.describe().length, 11);
     assert.deepEqual(
-      api.hooks().filter((entry) => entry.wired).map((entry) => entry.name).sort(),
+      api.hooks.describe().filter((entry) => entry.wired).map((entry) => entry.name).sort(),
       [...WIRED_HOOKS].sort(),
     );
     assert.deepEqual(api.services(), {
@@ -292,7 +296,7 @@ test('dispose: fires checkstop once, removes listeners, clears hooks and closes 
     assert.equal(stops.length, 1);
     assert.equal(instance.store.closed, true);
     assert.deepEqual(calls.disposers, ['session/created', 'session/disposed', 'session/event', 'tools/result', 'tools/pre-execute']);
-    assert.equal(instance.api.hooks().every((entry) => entry.count === 0), true);
+    assert.equal(instance.api.hooks.describe().every((entry) => entry.count === 0), true);
     instance.store.push({ body: 'after close' });
     assert.equal(instance.api.health().notices, 0);
     await instance.dispose();

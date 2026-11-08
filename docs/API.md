@@ -91,10 +91,10 @@ class ModapiError extends Error {
 
 | 字段 | 值 | 含义 |
 | --- | --- | --- |
-| `api.version` | `'0.2.0'` | 包版本 |
+| `api.version` | `'0.3.0'` | 包版本 |
 | `api.apiVersion` | `'1'` | 接口契约版本：**跨版本升级只看这个** |
-| `api.pluginVersion` | `'0.2.0'` | 包版本（`version` 的同义字段） |
-| `api.info().version` / `api.info().apiVersion` | `'0.2.0'` / `'1'` | 与上面两个一致 |
+| `api.pluginVersion` | `'0.3.0'` | 包版本（`version` 的同义字段） |
+| `api.info().version` / `api.info().apiVersion` | `'0.3.0'` / `'1'` | 与上面两个一致 |
 | `selfcheck` 基线里的 `apiVersion` | `'1'` | 接口契约版本 |
 
 判断「接口层是不是同一代」看 `apiVersion`；判断「装的哪个包」看 `version` / `pluginVersion`。
@@ -1219,7 +1219,7 @@ return check(from, to) === true;   // 没有 await
 
 ## 12. mod 装载与调用架构（对齐 Fabric API）
 
-> 本章接口自 `0.2.0` 起提供，`apiVersion` 仍为 `1`（纯增量，不破坏既有调用）。对应源码：`lib/events.js`、`lib/registry.js`、`lib/modules.js`、`lib/manifest.js`、`lib/semver.js`。
+> 本章接口自 `0.2.0` 起提供（`0.3.0` 起新增 `patch`/`ui`），`apiVersion` 仍为 `1`（纯增量，不破坏既有调用）。对应源码：`lib/events.js`、`lib/registry.js`、`lib/modules.js`、`lib/manifest.js`、`lib/semver.js`。
 
 ### 12.1 `modapi.events` — 事件
 
@@ -1330,3 +1330,106 @@ demo needs API modules it cannot get: work 1.0.0 does not satisfy ^2.0.0; nope (
 生命周期另有两个事件：`modapi:startup`（`start()` 末尾，在 `checkstart` 之前触发）与 `modapi:shutdown`（`dispose()` 开头，先于 `checkstop`）。两者 payload 与对应钩子相同。
 
 `modules.provide(name, version, { value })` 的 `value` 就是该模块的 API 面，`modapi.api('work')` 取到的正是 `modapi.work`；不传 `value` 时 `api(name)` 返回模块记录本身（`{ name, version, deprecated, note, source }`）。`provide()` 返回记录（含 `value`），不返回 disposer；`list()`/`describe()` 会剔掉 `value` 只留 `hasValue`，避免 `/modapi/api/info` 被整棵 API 面撑爆。
+
+## 13. 方法钩子（patch）
+
+`api.patch` 在宿主进程内改写对象方法的执行。语义对齐 Xposed 的 `XC_MethodHook`。
+
+### 13.1 `patch.method(target, key, hooks)`
+
+```js
+const handle = modapi.patch.method(modapi.notice, 'show', {
+  name: 'notice-title-marker',
+  source: 'my-mod',                       // 可选，缺省取脚本/插件来源
+  before(args, self) { args[0] = '[钩子] ' + args[0] },
+  replace(args, self) { return null },    // 可选
+  after(result, args, self) { return result }, // 可选
+})
+```
+
+- `target`：任何对象（含类原型）；`key`：方法名。沿原型链查找 descriptor。
+- 每个钩子按 `order`（默认 0）再按注册顺序执行；`after` 逆序。
+- `before` 返回 `false` → 取消原方法，**且跳过全部 `after`**（`replace` 也不执行）。
+- `replace` 返回任意值即作为本次调用的中间结果，原方法不执行；随后仍走 `after`。
+- 原方法返回 thenable 时，等 resolve 后进入 `after`；`after` 的返回值覆盖最终结果。
+- 钩子抛错：只累计 `errors` 并 `warn`，同时转发 `onerror` 钩子，原方法继续。
+
+返回控制器：`{id, enabled, enable(), disable(), restore(), describe()}`。
+
+### 13.2 其它方法
+
+| 方法 | 说明 |
+| --- | --- |
+| `patch.restore(target, key)` | 还原单个方法 |
+| `patch.restoreBySource(source)` | 还原某来源打的全部钩子（脚本卸载自动调用） |
+| `patch.restoreAll()` | 全量还原 |
+| `patch.list()` / `patch.describe()` / `patch.size` | 观察当前钩子 |
+
+上限 `patchLimit`（默认 512），超出抛 `CONFLICT`。
+
+### 13.3 边界
+
+- 只作用于 JS 层方法；DOM 事件用 `ui`。
+- 改不了已固化进闭包的内部调用（例如某模块内部直接引用了函数本身的引用）。
+- 打钩子会改变对象方法的 `name`/`length`（内部用 `defineProperty` 保留原值），依赖 `toString()` 自省的代码需注意。
+
+## 14. UI 规则（ui）
+
+宿主进程没有 DOM。`api.ui` 只维护规则表，浏览器端的 modapi 客户端每 3 秒拉一次 `GET /modapi/api/ui`，在 `document` 的 capture 阶段挂监听。
+
+### 14.1 `ui.hook(spec)`
+
+```js
+const rule = modapi.ui.hook({
+  selector: 'text=自动化任务',
+  event: 'click',            // 默认 click
+  mode: 'block',             // before | after | replace | block
+  once: false,               // true 时命中一次即删除
+  name: 'block-automation-nav',
+  handler(ctx) {
+    ctx.toast('拦下了「' + ctx.element.textContent.trim() + '」的点击', 'warn')
+  },
+})
+```
+
+返回 `{id, unhook(), describe()}`。
+
+### 14.2 选择器
+
+| 形式 | 语义 |
+| --- | --- |
+| `button[data-id="run"]` | 标准 CSS 选择器（`event.target.closest`） |
+| `text=自动化任务` | 元素可见文本（空白折叠、去首尾）**完全相等** |
+| `text*=自动化` | 可见文本**包含**子串，命中后向上找最近的按钮/链接 |
+
+### 14.3 mode 与 ctx
+
+| mode | 行为 |
+| --- | --- |
+| `before` | 先跑 handler，原监听照常 |
+| `after` | 浏览器默认行为之后再跑 handler |
+| `replace` | 原监听不执行，只跑 handler |
+| `block` | 原行为被 `preventDefault` + `stopPropagation` + `stopImmediatePropagation` 拦掉 |
+
+`ctx` 字段：`rule`、`selector`、`element`、`stop()`、`preventDefault()`、`log(...)`、`toast(text, level)`。
+handler 返回 `false` 等价于 `stop()`。handler 抛错只打 `console.warn`，不影响页面其余部分。
+
+### 14.4 handler 的序列化约束
+
+handler 以 `Function.prototype.toString()` 传输，客户端用 `new Function` 还原：
+
+- **必须自包含**：不能引用外层变量、闭包、模块作用域。
+- 不能用箭头函数以外的简写（`async`、生成器可用，但客户端不会 await）。
+- 参数只有 `(ctx, event)`；需要的数据写进函数体或从 `ctx` 取。
+- 宿主侧在 `ui.hook()` 时预编译校验，语法错误直接抛 `BAD_ARGUMENT`，不会等到浏览器端。
+
+### 14.5 上限与清理
+
+规则上限 `uiRuleLimit`（默认 64），选择器长度上限 512。`ui.unhook(id)`、`ui.clear()`、`ui.removeBySource(source)`；脚本卸载时按来源自动清理。
+
+### 14.6 已验证行为（probe，真实宿主）
+
+- `text=自动化任务` + `mode: 'block'`：点击后应用不跳转，右下角出现 handler 的 toast。
+- 同一脚本里的 `patch.method(modapi.notice, 'show', {before})`：公告标题变成 `[钩子] Xposed 演示已就绪`。
+- `hit` 计数经 `POST /modapi/api/ui/hit` 回传，`info().ui.rules[].hits` 可查（截图 `docs/images/shot-ui-block.png`）。
+- `text*=更多` + `mode: 'before'`：点击后原行为照旧，规则 hit 计数 +1（`info().ui.rules` 可查）。

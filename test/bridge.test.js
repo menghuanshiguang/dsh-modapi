@@ -389,3 +389,38 @@ test('registerBridge: a throwing register is caught, logged and reported', () =>
   assert.equal(bridge.failure(), 'failed: mount boom');
   assert.equal(logger.has('warn', 'cannot mount /modapi/api: mount boom'), true);
 });
+
+test('GET /ui returns the serialized rule set, empty when nothing is wired', async () => {
+  await withServer({ ui: () => ({ version: 3, rules: [{ id: 'ui-1', selector: '.a', event: 'click', mode: 'before', handler: 'x();', once: false }] }) }, async (server) => {
+    const response = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/ui`);
+    assert.equal(response.status, 200);
+    assert.equal(response.json.ok, true);
+    assert.equal(response.json.value.version, 3);
+    assert.equal(response.json.value.rules[0].id, 'ui-1');
+  });
+  await withServer({}, async (server) => {
+    const response = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/ui`);
+    assert.deepEqual(response.json, { ok: true, value: { version: 0, rules: [] } });
+  });
+});
+
+test('POST /ui/hit forwards the rule id and reports whether it was known', async () => {
+  const seen = [];
+  await withServer({ uiHit: (id) => { seen.push(id); return id === 'ui-1'; } }, async (server) => {
+    const response = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/ui/hit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: 'ui-1' }),
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.json, { ok: true, value: { hit: true } });
+    const blank = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/ui/hit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    assert.equal(blank.status, 200);
+    assert.equal(blank.json.value.hit, false);
+  });
+  assert.deepEqual(seen, ['ui-1', '']);
+});

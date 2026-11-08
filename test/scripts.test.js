@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { HookRegistry } from '../lib/hooks.js';
+import { createUiDomain } from '../lib/ui.js';
+import { Patcher } from '../lib/patcher.js';
 import { createScriptHost, discoverScripts, scriptDirectories } from '../lib/scripts.js';
 import { makeLogger, makeTmpDir, removeTmpDir } from './helpers.js';
 
@@ -289,4 +291,40 @@ test('dispose: unloads every script and clears hook subscriptions', async () => 
     assert.equal(hooks.count('checkstart'), 0);
     assert.equal(hooks.count('checkstop'), 0);
   });
+});
+
+test('load: ui and patch helpers are scoped to the script and cleaned up on unload', async () => {
+  const logger = makeLogger();
+  const hooks = new HookRegistry({ logger });
+  const ui = createUiDomain();
+  const patcher = new Patcher({ logger });
+  const api = {
+    hook: (name, handler, options) => hooks.on(name, handler, options),
+    ui: { hook: (spec) => ui.add(spec), removeBySource: (source) => ui.removeBySource(source) },
+    patch: { method: (target, key, spec) => patcher.method(target, key, spec), restoreBySource: (source) => patcher.restoreBySource(source) },
+  };
+  const tmp = makeTmpDir('ui-script');
+  const dshHome = tmp;
+  const file = writeScript(
+    dshHome,
+    'ui-demo.js',
+    [
+      'globalThis.demo = function () { return 1; };',
+      "ui.hook({ selector: '.toolbar button', mode: 'block', handler: 'event.preventDefault();' });",
+      "patch.method(globalThis, 'demo', { before() {} });",
+    ].join('\n'),
+  );
+  const host = createScriptHost({ api, hooks, logger, dshHome, config: {}, cwd: dshHome });
+  try {
+    await host.load();
+    assert.equal(ui.size, 1);
+    assert.equal(patcher.size, 1);
+    assert.equal(ui.list()[0].source.startsWith('script:'), true);
+    host.unload(file);
+    assert.equal(ui.size, 0);
+    assert.equal(patcher.size, 0);
+  } finally {
+    host.dispose();
+    removeTmpDir(dshHome);
+  }
 });

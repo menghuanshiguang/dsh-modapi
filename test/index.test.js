@@ -35,14 +35,16 @@ function services(overrides = {}) {
 
 test('index exports: identity, defaults and internals', () => {
   assert.equal(name, 'dsh-modapi');
-  assert.equal(version, '0.2.0');
+  assert.equal(version, '0.3.0');
   assert.equal(API_VERSION, '1');
   assert.equal(BRIDGE_PREFIX, '/modapi/api');
   assert.equal(Object.isFrozen(CONFIG_DEFAULTS), true);
   assert.deepEqual({ ...CONFIG_DEFAULTS }, {
     startupTimeoutMs: 15000,
+    uiRuleLimit: 64,
     noticeLimit: 64,
     noticeTtlMs: 600000,
+    patchLimit: 512,
     hookLimitPerName: 64,
     scriptDirs: [],
     scripts: [],

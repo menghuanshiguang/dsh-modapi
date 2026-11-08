@@ -13,7 +13,7 @@ import { registerBridge, BRIDGE_PREFIX } from './lib/bridge.js';
 import { messageOf } from './lib/errors.js';
 
 export const name = 'dsh-modapi';
-export const version = '0.2.0';
+export const version = '0.3.0';
 export { CONFIG_DEFAULTS, API_VERSION, BRIDGE_PREFIX };
 
 const NUMERIC_LIMITS = Object.freeze({
@@ -115,6 +115,8 @@ export function apply(ctx, rawConfig = {}) {
     notices: (after, waitMs) => instance.store.wait(after, waitMs),
     ack: (ids) => instance.store.ack(ids),
     selfcheck: () => instance.selfcheck.run({ deep: true, notify: false }),
+    ui: () => api.ui.serialize(),
+    uiHit: (id) => api.ui.hit(id),
     reject: (request) => {
       const connection = instance.compat.getService('connection');
       const check = connection?.requestRejection;

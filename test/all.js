@@ -27,6 +27,8 @@ import './manifest.test.js';
 import './modules.test.js';
 import './registry.test.js';
 import './events.test.js';
+import './patcher.test.js';
+import './ui.test.js';
 
 test('the suite entry itself is wired', () => {
   // Placeholder so a broken import chain fails loudly instead of reporting zero.
