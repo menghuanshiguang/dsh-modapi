@@ -102,7 +102,7 @@ export function apply(ctx) {
 
 四个域的方法返回 Promise（`toRecord` 除外，它是同步的），另有少数纯本地查询同步返回：`hooks()`、`health()`、`info()`、`services()`、`require()`、`notice.push/show/since/snapshot/clear`、`selfcheck.snapshot()`、`scripts.files()`。返回值是纯 JSON——宿主对象里的函数、循环引用、超深结构在跨边界时就被净化掉了。
 
-## Fabric 风格层：事件、注册表、模块版本、mod 清单
+## mod 装载与调用架构（对齐 Fabric API）
 
 这一层让 mod 从"调用某个函数"升级为按**命名空间**扩展宿主：自定义事件、注册内容、声明版本要求。
 
@@ -250,7 +250,7 @@ modapi.modules.supports({ work: '^2.0.0' });                 // false，不抛
 {
   "id": "fabric-demo",
   "version": "1.2.0",
-  "name": "Fabric 风格示例",
+  "name": "mod 装载示例",
   "entrypoints": { "start": "main.js", "stop": "stop.js" },
   "requires": { "work": "^1.0.0", "events": "^1.0.0" },
   "depends": {}

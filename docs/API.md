@@ -1217,7 +1217,7 @@ return check(from, to) === true;   // 没有 await
 
 宿主 `setTitle()` 返回 `undefined` 时，接口层返回改之前的实体快照——此时返回的 `title` 是**旧值**。宿主正常返回新实体时才是新值。这一点在桩宿主上按代码路径可推，**未在真实宿主上验证**。
 
-## 12. Fabric 风格层：事件 / 注册表 / 模块版本 / mod 清单
+## 12. mod 装载与调用架构（对齐 Fabric API）
 
 > 本章接口自 `0.2.0` 起提供，`apiVersion` 仍为 `1`（纯增量，不破坏既有调用）。对应源码：`lib/events.js`、`lib/registry.js`、`lib/modules.js`、`lib/manifest.js`、`lib/semver.js`。
 
