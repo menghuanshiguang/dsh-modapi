@@ -1,0 +1,13 @@
+# dsh-modapi: one row, one service (`modapi`). Plugins inject it by name.
+- insert:
+    - id: modapi
+      name: dsh-modapi
+      config:
+        startupTimeoutMs: 15000
+        scriptDirs: []
+        scripts: []
+        modDirs: []
+        watchScripts: false
+        noticeLimit: 64
+        noticeTtlMs: 600000
+        hookLimitPerName: 64

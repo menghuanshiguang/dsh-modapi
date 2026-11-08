@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Modapi",
+    "description": "Stable interface layer for DSH plugins: workspace/session/tool/fs domains, startup hooks and a notice channel."
+  }
+}

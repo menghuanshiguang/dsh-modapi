@@ -1,0 +1,49 @@
+{
+  "name": "dsh-modapi",
+  "version": "0.2.0",
+  "description": "Stable function table for DSH plugins: work / session / tool / fs domains, ModPE-style hooks (checkstart), and a notice channel. One API layer that absorbs DSH upgrades so plugins do not break.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./icon.svg": "./icon.svg",
+    "./locale/en.json": "./locale/en.json",
+    "./locale/zh.json": "./locale/zh.json",
+    "./errors": "./lib/errors.js",
+    "./hooks": "./lib/hooks.js",
+    "./notices": "./lib/notices.js"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "icon": "./icon.svg",
+  "files": [
+    "index.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale",
+    "docs",
+    "icon.svg",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/all.js",
+    "test:runner": "node --test test/"
+  },
+  "keywords": ["dsh", "dsh-plugin", "dsh-bundle", "deepseek-harness", "modapi", "compat"],
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.1"
+  },
+  "license": "MIT"
+}
