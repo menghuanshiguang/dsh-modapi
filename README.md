@@ -273,6 +273,8 @@ modapi.selfcheck.run({ deep: true, notify: true });   // → {ok, checked, missi
 - `docs/images/probe-regression.png`：模拟 DSH 改名后启动自检弹红框。
 - `docs/images/probe-fabric.png`：Fabric 风格 mod（注册表 + 自定义事件）加载成功。
 - `docs/images/shot-ui-block.png`：`patch.method` 给公告标题加 `[钩子]` 前缀；`ui` 规则拦下「自动化任务」按钮的点击并弹 toast，应用没有跳转。
+- `docs/images/desktop-notice.png`：**真实桌面应用**（`D:DSHPC`，非 probe）重启后，`$DSH_HOME/modapi/scripts/hello.js` 的 `checkstart()` 推出公告并由客户端半渲染（卡片右侧被浮动的助手头像挡住一部分）。
+- 同一轮重启的机器可读旁证：`$DSH_HOME/modapi/state/client.json` = `{"alive":true,"count":1,"detail":{"slot":true,"inject":["slots"]}}`，`contract.json` 10 项全 ok。
 
 ## 目录
 
