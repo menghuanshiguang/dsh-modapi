@@ -257,6 +257,7 @@ modapi.selfcheck.run({ deep: true, notify: true });   // → {ok, checked, missi
 - `EADDRINUSE` / `startup failed: N required plugins did not activate` → 上一个宿主进程还占着端口，先 `taskkill` 再启动。
 - 浏览器里 `401 {"code":"UNAUTHORIZED"}` → 用 `dsh web` 打印的带 `?token=` 的 URL 打开，cookie 会自己下发。
 - 公告不弹 → 浏览器控制台看 `[dsh-modapi]` 前缀的 warn；`GET /modapi/api/info` 能看到桥是否挂上。
+- 公告不弹且控制台没有 `[dsh-modapi] client activated` → 客户端半没被激活（`dsh.client.platform` / `./client` 导出 / `exports.inject`）；`$DSH_HOME/modapi/state/client.json` 只在渲染进程真的 ping 过时才会出现，可直接判断。
 
 ## 已知限制（0.3.0）
 

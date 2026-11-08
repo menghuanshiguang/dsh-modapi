@@ -117,6 +117,7 @@ export function apply(ctx, rawConfig = {}) {
     selfcheck: () => instance.selfcheck.run({ deep: true, notify: false }),
     ui: () => api.ui.serialize(),
     uiHit: (id) => api.ui.hit(id),
+    clientPing: (body) => instance.noteClientPing(body),
     reject: (request) => {
       const connection = instance.compat.getService('connection');
       const check = connection?.requestRejection;

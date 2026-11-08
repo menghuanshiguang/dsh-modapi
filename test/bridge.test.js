@@ -404,6 +404,22 @@ test('GET /ui returns the serialized rule set, empty when nothing is wired', asy
   });
 });
 
+test('POST /client/ping records the renderer half and echoes its state', async () => {
+  const seen = [];
+  await withServer({ clientPing: (body) => { seen.push(body); return { alive: true, count: 1 }; } }, async (server) => {
+    const response = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/client/ping`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ slot: true }),
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.json, { ok: true, value: { alive: true, count: 1 } });
+    assert.deepEqual(seen, [{ slot: true }]);
+    const fallback = await httpRequest(`${server.origin}${BRIDGE_PREFIX}/client/ping`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    assert.equal(fallback.status, 200);
+    assert.deepEqual(fallback.json, { ok: true, value: { alive: true, count: 1 } });
+  });
+});
 test('POST /ui/hit forwards the rule id and reports whether it was known', async () => {
   const seen = [];
   await withServer({ uiHit: (id) => { seen.push(id); return id === 'ui-1'; } }, async (server) => {
